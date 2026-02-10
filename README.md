@@ -1,234 +1,176 @@
-# HRMS Lite - Employee and Attendance Management System
+# Database Documentation - HRMS Lite
 
-A lightweight Human Resource Management System that allows administrators to manage employee records and track daily attendance.
+## Overview
 
-## Features
+HRMS Lite uses SQLite as its database backend. The database consists of two main tables: `employees` and `attendances`.
 
-### Employee Management
--  Add new employees with unique ID, full name, email, and department
--  View list of all employees
--  Delete employee records
--  Email validation and duplicate prevention
+## Database Files
 
-### Attendance Management
-- Mark attendance for employees (Present/Absent)
-- View attendance records for each employee
-- Filter attendance records by employee
-- Date-based attendance tracking
+- **`init.sql`** - Complete database initialization with sample data
+- **`schema.sql`** - Database schema documentation with detailed comments
+- **`hrms.db`** - Runtime database file (auto-generated)
 
-### UI/UX Features
--  Professional, responsive design
-- Loading states for better user experience
-- Error handling with user-friendly messages
-- Empty states when no data is available
-- Tab-based navigation between modules
+## Table Structure
 
-## Tech Stack
+### Employees Table
 
-### Backend
-- **FastAPI** - Modern, fast web framework for building APIs
-- **SQLAlchemy** - SQL toolkit and ORM
-- **SQLite** - Lightweight database for data persistence
-- **Pydantic** - Data validation using Python type annotations
-- **Uvicorn** - ASGI server
+| Column | Type | Constraints | Description |
+|---------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique identifier |
+| employee_id | TEXT | NOT NULL, UNIQUE | Employee ID (e.g., EMP001) |
+| full_name | TEXT | NOT NULL | Employee's full name |
+| email | TEXT | NOT NULL, UNIQUE | Email address |
+| department | TEXT | NOT NULL | Department name |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 
-### Frontend
-- **React 18** - JavaScript library for building user interfaces
-- **TypeScript** - Type-safe JavaScript
-- **Axios** - HTTP client for API requests
-- **CSS3** - Modern styling with responsive design
+### Attendances Table
 
-### Deployment
-- **Render** (Backend) - Cloud platform for hosting APIs
-- **Vercel** (Frontend) - Platform for hosting static web applications
+| Column | Type | Constraints | Description |
+|---------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY, AUTOINCREMENT | Unique identifier |
+| employee_id | INTEGER | NOT NULL, FOREIGN KEY | Reference to employees.id |
+| date | DATE | NOT NULL | Attendance date (YYYY-MM-DD) |
+| status | TEXT | NOT NULL, CHECK | 'Present' or 'Absent' |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
 
-## Project Structure
+## Relationships
 
-```
-HRP/
-├── backend/
-│   ├── main.py              # FastAPI application
-│   ├── requirements.txt     # Python dependencies
-│   └── Procfile            # Deployment configuration
-├── frontend/
-│   ├── public/
-│   │   └── index.html      # HTML template
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── App.tsx         # Main application component
-│   │   ├── api.ts          # API client
-│   │   ├── types.ts        # TypeScript type definitions
-│   │   └── *.css           # Styling
-│   ├── package.json        # Node.js dependencies
-│   └── tsconfig.json       # TypeScript configuration
-└── README.md               # This file
-```
+- **One-to-Many**: One employee can have many attendance records
+- **Cascade Delete**: Deleting an employee removes all their attendance records
+- **Foreign Key**: attendance.employee_id references employees.id
 
-## API Endpoints
+## Indexes
 
-### Employee Management
-- `POST /employees/` - Create a new employee
-- `GET /employees/` - Get all employees
-- `GET /employees/{id}` - Get employee by ID with attendance records
-- `DELETE /employees/{id}` - Delete an employee
+For optimal performance, the following indexes are created:
 
-### Attendance Management
-- `POST /attendance/` - Mark attendance for an employee
-- `GET /attendance/` - Get all attendance records
-- `GET /attendance/employee/{employee_id}` - Get attendance for specific employee
+- `idx_employees_employee_id` - Fast employee lookup by ID
+- `idx_employees_email` - Fast employee lookup by email
+- `idx_attendances_employee_id` - Fast attendance lookup by employee
+- `idx_attendances_date` - Fast attendance lookup by date
 
-### Health Check
-- `GET /health` - Check API health status
+## Database Initialization
 
-## Setup and Installation
-
-### Prerequisites
-- Node.js (v16 or higher)
-- Python (v3.8 or higher)
-- Git
-
-### Backend Setup
-
-1. Navigate to the backend directory:
+### Method 1: Using init.sql
 ```bash
-cd backend
+# Navigate to database directory
+cd database
+
+# Run SQLite with init script
+sqlite3 ../hrms.db < init.sql
 ```
 
-2. Create a virtual environment:
-```bash
-python -m venv venv
+### Method 2: Automatic (Recommended)
+The FastAPI application automatically creates the database and tables on first run.
 
-# Windows
-venv\Scripts\activate
+## Sample Data
 
-# macOS/Linux
-source venv/bin/activate
-```
+The `init.sql` file includes sample data:
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Start the backend server:
-```bash
-uvicorn main:app --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm start
-```
-
-The frontend will be available at `http://localhost:3000`
-
-## Running the Application
-
-1. Start the backend server (as described above)
-2. Start the frontend server (as described above)
-3. Open your browser and navigate to `http://localhost:3000`
+- **5 Sample Employees** across different departments
+- **12 Attendance Records** showing various scenarios
+- **Realistic Data** for testing and demonstration
 
 ## Data Validation
 
 ### Employee Validation
 - Employee ID must be unique
 - Email must be valid format and unique
-- All fields (Employee ID, Full Name, Email, Department) are required
-- Department must be one of: Engineering, Sales, Marketing, HR, Finance, Operations
+- All fields except id and created_at are required
 
 ### Attendance Validation
-- Employee must exist in the system
+- Employee must exist in employees table
+- Status must be 'Present' or 'Absent'
 - Date cannot be in the future
-- Status must be either "Present" or "Absent"
-- Cannot mark duplicate attendance for the same employee and date
+- No duplicate attendance for same employee and date
 
-## Error Handling
+## Backup and Recovery
 
-The application includes comprehensive error handling:
-- **Client-side validation** for immediate feedback
-- **Server-side validation** for data integrity
-- **User-friendly error messages** for better UX
-- **HTTP status codes** following REST conventions
+### Backup Database
+```bash
+# Create backup
+cp hrms.db hrms_backup_$(date +%Y%m%d_%H%M%S).db
 
-## Deployment
+# Or using SQLite dump
+sqlite3 hrms.db .dump > hrms_backup_$(date +%Y%m%d_%H%M%S).sql
+```
 
-### Backend Deployment (Render)
-1. Push the code to a GitHub repository
-2. Connect the repository to Render
-3. Set the build command: `pip install -r requirements.txt`
-4. Set the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-5. Deploy the service
+### Restore Database
+```bash
+# Restore from backup
+cp hrms_backup_20240115_120000.db hrms.db
 
-### Frontend Deployment (Vercel)
-1. Push the code to a GitHub repository
-2. Connect the repository to Vercel
-3. Set the build command: `npm run build`
-4. Set the output directory: `build`
-5. Update the API URL in the environment variables
-6. Deploy the application
+# Or from SQL dump
+sqlite3 hrms.db < hrms_backup_20240115_120000.sql
+```
 
-## Assumptions and Limitations
+## Query Examples
 
-### Assumptions
-- Single admin user (no authentication required)
-- Email format follows standard patterns
-- Department list is predefined and limited
-- Attendance is marked on a daily basis
+### Get All Employees
+```sql
+SELECT * FROM employees ORDER BY created_at DESC;
+```
 
-### Limitations
-- No user authentication system
-- No bulk operations (e.g., bulk attendance marking)
-- No advanced reporting or analytics
-- No leave management or payroll features
-- No file upload capabilities for employee photos/documents
+### Get Employee Attendance
+```sql
+SELECT e.full_name, e.employee_id, a.date, a.status
+FROM employees e
+LEFT JOIN attendances a ON e.id = a.employee_id
+WHERE e.id = 1
+ORDER BY a.date DESC;
+```
 
-## Future Enhancements
+### Attendance Summary
+```sql
+SELECT 
+    e.full_name,
+    e.department,
+    COUNT(CASE WHEN a.status = 'Present' THEN 1 END) as present_days,
+    COUNT(CASE WHEN a.status = 'Absent' THEN 1 END) as absent_days,
+    COUNT(*) as total_days
+FROM employees e
+LEFT JOIN attendances a ON e.id = a.employee_id
+GROUP BY e.id, e.full_name, e.department;
+```
 
-### Potential Features
-- User authentication and role-based access
-- Advanced reporting and analytics dashboard
-- Bulk attendance operations
-- Leave management system
-- Payroll integration
-- Employee profile photos
-- Email notifications for attendance
-- Mobile-responsive improvements
-- Data export functionality
+### Department-wise Attendance
+```sql
+SELECT 
+    e.department,
+    COUNT(CASE WHEN a.status = 'Present' THEN 1 END) as present_count,
+    COUNT(CASE WHEN a.status = 'Absent' THEN 1 END) as absent_count
+FROM employees e
+LEFT JOIN attendances a ON e.id = a.employee_id
+GROUP BY e.department;
+```
 
-### Technical Improvements
-- Database migration to PostgreSQL/MySQL for production
-- Caching layer for improved performance
-- API rate limiting
-- Comprehensive test suite
-- CI/CD pipeline setup
-- Monitoring and logging
+## Migration Notes
 
-## Contributing
+### Version 1.0 (Current)
+- Initial database schema
+- Basic employee and attendance tracking
+- SQLite backend for simplicity
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### Future Considerations
+- Migration to PostgreSQL for production
+- Add user authentication table
+- Add leave management tables
+- Add payroll-related tables
 
-## License
+## Performance Optimization
 
-This project is open source and available under the [MIT License](LICENSE).
+### Recommended Settings
+```python
+# For high-traffic applications
+SQLALCHEMY_ENGINE_OPTIONS = {
+    "pool_size": 20,
+    "max_overflow": 30,
+    "pool_pre_ping": True,
+    "pool_recycle": 3600
+}
+```
 
-## Contact
-
-For questions or support, please open an issue in the GitHub repository.
+### Query Optimization
+- Use indexes for frequent queries
+- Avoid SELECT * in production
+- Implement pagination for large datasets
+- Consider read replicas for reporting queries
